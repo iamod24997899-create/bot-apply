@@ -1,4 +1,4 @@
-﻿
+
 import os
 import json
 import sqlite3
@@ -1157,7 +1157,7 @@ class ApplicationPanelView(discord.ui.View):
     @discord.ui.button(
         label="Staff Apply",
         style=discord.ButtonStyle.primary,
-        emoji="ðŸ“",
+        emoji="\U0001F4DD",
         custom_id="apply_abel:start_staff",
         row=0,
     )
@@ -1171,7 +1171,7 @@ class ApplicationPanelView(discord.ui.View):
     @discord.ui.button(
         label="Leaker Apply",
         style=discord.ButtonStyle.primary,
-        emoji="ðŸ“",
+        emoji="\U0001F4DD",
         custom_id="apply_abel:start_leaker",
         row=0,
     )
