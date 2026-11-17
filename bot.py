@@ -1,4 +1,4 @@
-
+﻿
 import os
 import json
 import sqlite3
@@ -26,6 +26,10 @@ TRIAL_MODERATOR_ROLE_ID = 1525306897219981312
 # Leaker roles
 LEAKER_TEAM_ROLE_ID = 1568223721406341222
 TRIAL_LEAKER_ROLE_ID = 1568223887186198528
+
+# Partnership roles
+PARTNERSHIP_MANAGER_ROLE_ID = 1572168269681664080
+TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID = 1571977610630533261
 
 
 # =========================================================
@@ -56,6 +60,18 @@ LEAKER_APPLICATION_QUESTIONS = [
     "Why should Abel Community accept you as a Leaker, and what value could you bring to the community?",
 ]
 
+PARTNERSHIP_APPLICATION_QUESTIONS = [
+    "What is your Discord username, User ID and age?",
+    "What is your timezone, and how many hours per day or week can you dedicate to managing partnerships?",
+    "Do you have previous experience managing partnerships or working with other Discord communities? Explain your experience.",
+    "Why do you want to become a Partnership Manager at Abel Community?",
+    "How would you find and approach new communities that could become potential partners?",
+    "What criteria would you use to decide whether another server is suitable for a partnership with Abel Community?",
+    "A partner server starts breaking our partnership rules or becomes inactive. How would you handle the situation?",
+    "Another community asks for a partnership that does not meet our requirements. What would you do?",
+    "How would you maintain professional communication with other server owners and partnership teams?",
+    "What ideas would you bring to improve Abel Community's partnership program, and why should we select you?"
+]
 FRIEND_RULE_OPTIONS = [
     "Ignore it because they're my friend.",
     "Give them a warning privately and let it slide.",
@@ -87,6 +103,8 @@ logging.basicConfig(level=logging.INFO)
 def get_questions(app_type):
     if app_type == "leaker":
         return LEAKER_APPLICATION_QUESTIONS
+    if app_type == "partnership":
+        return PARTNERSHIP_APPLICATION_QUESTIONS
     return STAFF_APPLICATION_QUESTIONS
 
 
@@ -340,7 +358,7 @@ class CancelApplicationView(discord.ui.View):
     @discord.ui.button(
         label="Cancel Application",
         style=discord.ButtonStyle.danger,
-        emoji="✖️",
+        emoji="âœ–ï¸",
         custom_id="apply_abel:cancel_application",
     )
     async def cancel_button(
@@ -423,7 +441,7 @@ class CancelChoiceButton(discord.ui.Button):
         super().__init__(
             label="Cancel Application",
             style=discord.ButtonStyle.danger,
-            emoji="✖️",
+            emoji="âœ–ï¸",
             row=4,
             custom_id="apply_abel:cancel_choice",
         )
@@ -480,7 +498,7 @@ class RoleSelectView(discord.ui.View):
     @discord.ui.button(
         label="Submit Roles",
         style=discord.ButtonStyle.success,
-        emoji="✅",
+        emoji="âœ…",
         row=1,
     )
     async def submit_roles(
@@ -531,7 +549,7 @@ class RoleSelectView(discord.ui.View):
     @discord.ui.button(
         label="Cancel Application",
         style=discord.ButtonStyle.danger,
-        emoji="✖️",
+        emoji="âœ–ï¸",
         row=2,
     )
     async def cancel_roles(
@@ -657,11 +675,10 @@ def build_application_embed(application):
     else:
         embed_color = discord.Color.blurple()
 
-    application_name = (
-        "Leaker Application"
-        if app_type == "leaker"
-        else "Staff Application"
-    )
+    application_name = {
+        "leaker": "Leaker Application",
+        "partnership": "Partnership Manager Application",
+    }.get(app_type, "Staff Application")
 
     embed = discord.Embed(
         title=f"{application_name} #{application['id']}",
@@ -881,11 +898,10 @@ async def ask_application_questions(user, app_type):
     questions = get_questions(app_type)
     total_questions = len(questions)
 
-    application_name = (
-        "Leaker"
-        if app_type == "leaker"
-        else "Staff"
-    )
+    application_name = {
+        "leaker": "Leaker",
+        "partnership": "Partnership Manager",
+    }.get(app_type, "Staff")
 
     try:
         await user.send(
@@ -999,6 +1015,13 @@ async def start_application(interaction, app_type):
         )
         return
 
+    if app_type == "partnership" and not any(role.id == STAFF_TEAM_ROLE_ID for role in interaction.user.roles):
+        await interaction.response.send_message(
+            "Only members of the Staff Team can apply for Partnership Manager.",
+            ephemeral=True,
+        )
+        return
+
     settings = get_settings(interaction.guild.id)
 
     if not settings or not settings.get("review_channel_id"):
@@ -1008,17 +1031,19 @@ async def start_application(interaction, app_type):
         )
         return
 
-    required_role_ids = (
-        [
+    required_role_ids = {
+        "leaker": [
             LEAKER_TEAM_ROLE_ID,
             TRIAL_LEAKER_ROLE_ID,
-        ]
-        if app_type == "leaker"
-        else [
-            STAFF_TEAM_ROLE_ID,
-            TRIAL_MODERATOR_ROLE_ID,
-        ]
-    )
+        ],
+        "partnership": [
+            PARTNERSHIP_MANAGER_ROLE_ID,
+            TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID,
+        ],
+    }.get(app_type, [
+        STAFF_TEAM_ROLE_ID,
+        TRIAL_MODERATOR_ROLE_ID,
+    ])
 
     missing_roles = [
         role_id for role_id in required_role_ids
@@ -1132,7 +1157,7 @@ class ApplicationPanelView(discord.ui.View):
     @discord.ui.button(
         label="Staff Apply",
         style=discord.ButtonStyle.primary,
-        emoji="📝",
+        emoji="ðŸ“",
         custom_id="apply_abel:start_staff",
         row=0,
     )
@@ -1146,7 +1171,7 @@ class ApplicationPanelView(discord.ui.View):
     @discord.ui.button(
         label="Leaker Apply",
         style=discord.ButtonStyle.primary,
-        emoji="📁",
+        emoji="ðŸ“",
         custom_id="apply_abel:start_leaker",
         row=0,
     )
@@ -1156,6 +1181,20 @@ class ApplicationPanelView(discord.ui.View):
         button: discord.ui.Button,
     ):
         await start_application(interaction, "leaker")
+
+    @discord.ui.button(
+        label="Partnership Manager Apply",
+        style=discord.ButtonStyle.primary,
+        emoji="💎",
+        custom_id="apply_abel:start_partnership",
+        row=1,
+    )
+    async def apply_partnership_button(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ):
+        await start_application(interaction, "partnership")
 
 
 # =========================================================
@@ -1242,7 +1281,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Accept",
         style=discord.ButtonStyle.success,
-        emoji="✅",
+        emoji="âœ…",
         custom_id="apply_abel:accept_direct",
         row=0,
     )
@@ -1252,7 +1291,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Accept with Reason",
         style=discord.ButtonStyle.success,
-        emoji="📝",
+        emoji="ðŸ“",
         custom_id="apply_abel:accept",
         row=0,
     )
@@ -1283,7 +1322,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Reject",
         style=discord.ButtonStyle.danger,
-        emoji="❌",
+        emoji="âŒ",
         custom_id="apply_abel:reject_direct",
         row=1,
     )
@@ -1293,7 +1332,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Reject with Reason",
         style=discord.ButtonStyle.danger,
-        emoji="📝",
+        emoji="ðŸ“",
         custom_id="apply_abel:reject",
         row=1,
     )
@@ -1369,11 +1408,10 @@ async def process_review_decision(
     member = None
     app_type = get_application_type(application)
 
-    application_name = (
-        "Leaker"
-        if app_type == "leaker"
-        else "Staff"
-    )
+    application_name = {
+        "leaker": "Leaker",
+        "partnership": "Partnership Manager",
+    }.get(app_type, "Staff")
 
     if guild:
         try:
@@ -1386,16 +1424,19 @@ async def process_review_decision(
             member = None
 
     if accepted and member and settings:
-        if app_type == "leaker":
-            role_ids = [
+        role_ids = {
+            "leaker": [
                 LEAKER_TEAM_ROLE_ID,
                 TRIAL_LEAKER_ROLE_ID,
-            ]
-        else:
-            role_ids = [
-                STAFF_TEAM_ROLE_ID,
-                TRIAL_MODERATOR_ROLE_ID,
-            ]
+            ],
+            "partnership": [
+                PARTNERSHIP_MANAGER_ROLE_ID,
+                TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID,
+            ],
+        }.get(app_type, [
+            STAFF_TEAM_ROLE_ID,
+            TRIAL_MODERATOR_ROLE_ID,
+        ])
 
         roles_to_add = []
 
@@ -1491,7 +1532,7 @@ async def process_review_decision(
 
             if accepted:
                 dm_text = (
-                    f"🎉 Your **{application_name} application** for "
+                    f"ðŸŽ‰ Your **{application_name} application** for "
                     f"**{server_name}** has been accepted!\n"
                     f"**Reason:** {reason}"
                 )
@@ -1520,7 +1561,7 @@ async def process_review_decision(
 
     if result_messages:
         message += "\n\n" + "\n".join(
-            f"⚠️ {item}" for item in result_messages
+            f"âš ï¸ {item}" for item in result_messages
         )
 
     await interaction.followup.send(message, ephemeral=True)
@@ -1570,11 +1611,14 @@ async def applysetup(
         "**Application system configured successfully.**\n\n"
         f"**Review channel:** {review_channel.mention}\n\n"
         "**Staff application roles:**\n"
-        f"• Staff Team: <@&{STAFF_TEAM_ROLE_ID}>\n"
-        f"• Trial Moderator: <@&{TRIAL_MODERATOR_ROLE_ID}>\n\n"
+        f"â€¢ Staff Team: <@&{STAFF_TEAM_ROLE_ID}>\n"
+        f"â€¢ Trial Moderator: <@&{TRIAL_MODERATOR_ROLE_ID}>\n\n"
         "**Leaker application roles:**\n"
-        f"• Leaker Team: <@&{LEAKER_TEAM_ROLE_ID}>\n"
-        f"• Trial Leaker: <@&{TRIAL_LEAKER_ROLE_ID}>\n\n"
+        f"â€¢ Leaker Team: <@&{LEAKER_TEAM_ROLE_ID}>\n"
+        f"â€¢ Trial Leaker: <@&{TRIAL_LEAKER_ROLE_ID}>\n\n"
+        "**Partnership application roles:**\n"
+        f"â€¢ Partnership Manager: <@&{PARTNERSHIP_MANAGER_ROLE_ID}>\n"
+        f"â€¢ Trial Head of Partnership: <@&{TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID}>\n\n"
         f"**Staff review permission:** {staff_role_text}",
         ephemeral=True,
     )
@@ -1586,9 +1630,9 @@ async def applysetup(
 
 def build_panel_embed():
     embed = discord.Embed(
-        title="Apply for Staff",
+        title="Applications | Abel Community",
         description=(
-            "Interested in joining our staff team or becoming a Leaker?\n\n"
+            "Interested in joining our Staff Team, becoming a Leaker, or managing partnerships?\n\n"
             "Choose the application you want to submit using the buttons below. "
             "The bot will send you the questions through direct messages.\n\n"
             "Please answer honestly and wait for the staff team to review "
@@ -1606,6 +1650,8 @@ def get_missing_application_roles(guild):
         TRIAL_MODERATOR_ROLE_ID,
         LEAKER_TEAM_ROLE_ID,
         TRIAL_LEAKER_ROLE_ID,
+        PARTNERSHIP_MANAGER_ROLE_ID,
+        TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID,
     ]
 
     return [
@@ -1737,7 +1783,7 @@ async def applypanelreplace(
             old_embed = message.embeds[0]
 
             # Only replace the application panel, not application reviews.
-            if old_embed.title != "Apply for Staff":
+            if old_embed.title not in ("Apply for Staff", "Applications | Abel Community"):
                 continue
 
             await message.edit(
@@ -1749,7 +1795,7 @@ async def applypanelreplace(
             await interaction.followup.send(
                 "**Application panel replaced successfully!**\n"
                 f"Updated the existing panel in {target_channel.mention}.\n"
-                "The Staff Apply and Leaker Apply buttons are now available.",
+                "The Staff Apply, Leaker Apply, and Partnership Manager Apply buttons are now available.",
                 ephemeral=True,
             )
             return
@@ -1821,3 +1867,15 @@ if __name__ == "__main__":
         )
 
     bot.run(TOKEN)
+
+
+
+
+
+
+
+
+
+
+
+
