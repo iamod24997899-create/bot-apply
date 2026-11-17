@@ -358,7 +358,7 @@ class CancelApplicationView(discord.ui.View):
     @discord.ui.button(
         label="Cancel Application",
         style=discord.ButtonStyle.danger,
-        emoji="âœ–ï¸",
+        emoji="\u274C",
         custom_id="apply_abel:cancel_application",
     )
     async def cancel_button(
@@ -441,7 +441,7 @@ class CancelChoiceButton(discord.ui.Button):
         super().__init__(
             label="Cancel Application",
             style=discord.ButtonStyle.danger,
-            emoji="âœ–ï¸",
+            emoji="\u274C",
             row=4,
             custom_id="apply_abel:cancel_choice",
         )
@@ -498,7 +498,7 @@ class RoleSelectView(discord.ui.View):
     @discord.ui.button(
         label="Submit Roles",
         style=discord.ButtonStyle.success,
-        emoji="âœ…",
+        emoji="\u2705",
         row=1,
     )
     async def submit_roles(
@@ -549,7 +549,7 @@ class RoleSelectView(discord.ui.View):
     @discord.ui.button(
         label="Cancel Application",
         style=discord.ButtonStyle.danger,
-        emoji="âœ–ï¸",
+        emoji="\u274C",
         row=2,
     )
     async def cancel_roles(
@@ -1281,7 +1281,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Accept",
         style=discord.ButtonStyle.success,
-        emoji="âœ…",
+        emoji="\u2705",
         custom_id="apply_abel:accept_direct",
         row=0,
     )
@@ -1291,7 +1291,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Accept with Reason",
         style=discord.ButtonStyle.success,
-        emoji="ðŸ“",
+        emoji="\U0001F4DD",
         custom_id="apply_abel:accept",
         row=0,
     )
@@ -1322,7 +1322,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Reject",
         style=discord.ButtonStyle.danger,
-        emoji="âŒ",
+        emoji="\u274C",
         custom_id="apply_abel:reject_direct",
         row=1,
     )
@@ -1332,7 +1332,7 @@ class ApplicationReviewView(discord.ui.View):
     @discord.ui.button(
         label="Reject with Reason",
         style=discord.ButtonStyle.danger,
-        emoji="ðŸ“",
+        emoji="\U0001F4DD",
         custom_id="apply_abel:reject",
         row=1,
     )
