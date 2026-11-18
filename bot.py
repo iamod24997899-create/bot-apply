@@ -30,6 +30,9 @@ TRIAL_LEAKER_ROLE_ID = 1568223887186198528
 # Partnership roles
 PARTNERSHIP_MANAGER_ROLE_ID = 1572168269681664080
 TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID = 1571977610630533261
+TRIAL_HEAD_COMMUNITY_ROLE_ID = 1571975039983550564
+HEADS_ROLE_ID = 1572387480894971904
+PROMOTE_DEMOTE_ROLE_ID = 1571928042853499131
 
 
 # =========================================================
@@ -72,6 +75,20 @@ PARTNERSHIP_APPLICATION_QUESTIONS = [
     "How would you maintain professional communication with other server owners and partnership teams?",
     "What ideas would you bring to improve Abel Community's partnership program, and why should we select you?"
 ]
+
+TRIAL_HEAD_COMMUNITY_APPLICATION_QUESTIONS = [
+    "What is your Discord username, User ID and age?",
+    "What is your timezone, and how much time can you consistently dedicate to leading the Community team?",
+    "What previous experience do you have leading teams, managing communities or coordinating staff members? Describe your responsibilities and achievements.",
+    "Why do you want to become Trial Head of Community at Abel Community, and what makes you suitable for this leadership position?",
+    "How would you organize the Community team, distribute responsibilities and ensure that every team member understands their duties?",
+    "Two staff members have a serious disagreement that is affecting the team's work. How would you investigate the situation and resolve it professionally?",
+    "A staff member is consistently inactive or failing to complete their responsibilities. How would you address the issue while remaining fair and professional?",
+    "How would you handle a decision from another Head that you strongly disagree with? Explain how you would communicate your concerns.",
+    "What specific changes or initiatives would you introduce to improve member engagement, community activity and the overall experience in Abel Community?",
+    "If you were accepted, what would your priorities be during your first 30 days, and how would you measure whether you had been successful?",
+]
+
 FRIEND_RULE_OPTIONS = [
     "Ignore it because they're my friend.",
     "Give them a warning privately and let it slide.",
@@ -105,6 +122,8 @@ def get_questions(app_type):
         return LEAKER_APPLICATION_QUESTIONS
     if app_type == "partnership":
         return PARTNERSHIP_APPLICATION_QUESTIONS
+    if app_type == "trial_head_community":
+        return TRIAL_HEAD_COMMUNITY_APPLICATION_QUESTIONS
     return STAFF_APPLICATION_QUESTIONS
 
 
@@ -678,10 +697,11 @@ def build_application_embed(application):
     application_name = {
         "leaker": "Leaker Application",
         "partnership": "Partnership Manager Application",
+        "trial_head_community": "Trial Head of Community Application",
     }.get(app_type, "Staff Application")
 
     embed = discord.Embed(
-        title=f"{application_name} #{application['id']}",
+        title=application_name,
         color=embed_color,
     )
 
@@ -735,7 +755,7 @@ def build_application_embed(application):
             inline=False,
         )
 
-    embed.set_footer(text=f"Application ID: {application['id']}")
+    embed.set_footer(text=BOT_NAME)
     return embed
 
 
@@ -901,6 +921,7 @@ async def ask_application_questions(user, app_type):
     application_name = {
         "leaker": "Leaker",
         "partnership": "Partnership Manager",
+        "trial_head_community": "Trial Head of Community",
     }.get(app_type, "Staff")
 
     try:
@@ -1015,9 +1036,11 @@ async def start_application(interaction, app_type):
         )
         return
 
-    if app_type == "partnership" and not any(role.id == STAFF_TEAM_ROLE_ID for role in interaction.user.roles):
+    if app_type in ("partnership", "trial_head_community") and not any(
+        role.id == STAFF_TEAM_ROLE_ID for role in interaction.user.roles
+    ):
         await interaction.response.send_message(
-            "Only members of the Staff Team can apply for Partnership Manager.",
+            "Only members of the Staff Team can apply for this position.",
             ephemeral=True,
         )
         return
@@ -1039,6 +1062,12 @@ async def start_application(interaction, app_type):
         "partnership": [
             PARTNERSHIP_MANAGER_ROLE_ID,
             TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID,
+            HEADS_ROLE_ID,
+        ],
+        "trial_head_community": [
+            TRIAL_HEAD_COMMUNITY_ROLE_ID,
+            HEADS_ROLE_ID,
+            PROMOTE_DEMOTE_ROLE_ID,
         ],
     }.get(app_type, [
         STAFF_TEAM_ROLE_ID,
@@ -1195,6 +1224,20 @@ class ApplicationPanelView(discord.ui.View):
         button: discord.ui.Button,
     ):
         await start_application(interaction, "partnership")
+
+    @discord.ui.button(
+        label="Trial Head Community Apply",
+        style=discord.ButtonStyle.primary,
+        emoji="\U0001F451",
+        custom_id="apply_abel:start_trial_head_community",
+        row=1,
+    )
+    async def apply_trial_head_community_button(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ):
+        await start_application(interaction, "trial_head_community")
 
 
 # =========================================================
@@ -1411,6 +1454,7 @@ async def process_review_decision(
     application_name = {
         "leaker": "Leaker",
         "partnership": "Partnership Manager",
+        "trial_head_community": "Trial Head of Community",
     }.get(app_type, "Staff")
 
     if guild:
@@ -1430,8 +1474,14 @@ async def process_review_decision(
                 TRIAL_LEAKER_ROLE_ID,
             ],
             "partnership": [
-                PARTNERSHIP_MANAGER_ROLE_ID,
                 TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID,
+                PARTNERSHIP_MANAGER_ROLE_ID,
+                HEADS_ROLE_ID,
+            ],
+            "trial_head_community": [
+                TRIAL_HEAD_COMMUNITY_ROLE_ID,
+                HEADS_ROLE_ID,
+                PROMOTE_DEMOTE_ROLE_ID,
             ],
         }.get(app_type, [
             STAFF_TEAM_ROLE_ID,
@@ -1555,7 +1605,7 @@ async def process_review_decision(
             )
 
     message = (
-        f"{application_name} application #{application['id']} "
+        f"{application_name} application "
         f"has been **{new_status}**."
     )
 
@@ -1632,7 +1682,7 @@ def build_panel_embed():
     embed = discord.Embed(
         title="Applications | Abel Community",
         description=(
-            "Interested in joining our Staff Team, becoming a Leaker, or managing partnerships?\n\n"
+            "Interested in joining our Staff Team, becoming a Leaker, managing partnerships, or leading the Community team?\n\n"
             "Choose the application you want to submit using the buttons below. "
             "The bot will send you the questions through direct messages.\n\n"
             "Please answer honestly and wait for the staff team to review "
@@ -1652,6 +1702,9 @@ def get_missing_application_roles(guild):
         TRIAL_LEAKER_ROLE_ID,
         PARTNERSHIP_MANAGER_ROLE_ID,
         TRIAL_HEAD_OF_PARTNERSHIP_ROLE_ID,
+        TRIAL_HEAD_COMMUNITY_ROLE_ID,
+        HEADS_ROLE_ID,
+        PROMOTE_DEMOTE_ROLE_ID,
     ]
 
     return [
@@ -1795,7 +1848,7 @@ async def applypanelreplace(
             await interaction.followup.send(
                 "**Application panel replaced successfully!**\n"
                 f"Updated the existing panel in {target_channel.mention}.\n"
-                "The Staff Apply, Leaker Apply, and Partnership Manager Apply buttons are now available.",
+                "The Staff Apply, Leaker Apply, Partnership Manager Apply, and Trial Head Community Apply buttons are now available.",
                 ephemeral=True,
             )
             return
